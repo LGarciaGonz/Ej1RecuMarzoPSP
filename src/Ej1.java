@@ -14,7 +14,7 @@ public class Ej1 {
         List<Tarea> l_ListaTareas = new ArrayList<Tarea>();
         Tarea l_Tarea = null;
         ThreadPoolExecutor l_Executor = (ThreadPoolExecutor) Executors.newFixedThreadPool(NUMERO_HILOS);
-        List <Future<String>> l_ListaResultados = null;
+        List<Future<String>> l_ListaResultados = null;
 
 
         System.out.println("Introduce una serie de números separados por espacios:");
@@ -36,6 +36,7 @@ public class Ej1 {
             for (Future<String> l_Linea : l_ListaResultados) {
                 System.out.println(l_Linea.get());
             }
+
 
         } catch (InterruptedException l_Ex) {
             System.out.println("ERROR: Ha fallado el invoke() con error: " + l_Ex);
@@ -62,8 +63,6 @@ public class Ej1 {
 
         return l_ListaNumeros;
     }
-
-
 }
 
 // Clase para mostrar el texto ------------------------
@@ -78,7 +77,6 @@ class Tarea implements Callable<String> {
     @Override
     public String call() throws Exception {
 
-//        > [<número>] - [<contador>] – [<(no) es primo>]
         return "> [" + a_Numero + "] - [" + String.valueOf(a_Numero).length() + "] – [" + esPrimo(a_Numero) + "]";
     }
 
