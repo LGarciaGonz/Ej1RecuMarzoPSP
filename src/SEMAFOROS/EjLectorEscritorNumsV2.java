@@ -5,18 +5,20 @@ import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.concurrent.Semaphore;
 
-import static SEMAFOROS.EjLectorEscritorNumsV2.MAX_NUMS2;
-import static SEMAFOROS.EjLectorEscritorNumsV2.RUTA2;
+import static SEMAFOROS.EjLectorEscritorNumsV2.*;
 
 public class EjLectorEscritorNumsV2 {
 
     public static final int NUM_HILOS2 = 2;
     public static final int MAX_NUMS2 = 5;
-    public static final String RUTA2 = "src/resourcesJava/ArchivoNumsV2.txt";
+    public static final int PAUSA_LECTOR = 500;
+    public static final String RUTA_FICHERO = "FicherosInOut//ArchivoNumsV2.txt";
+    public static final int EOF = -1;
+    public static final char CARACTER_SEPARADOR = ',';
 
     public static void main(String[] args) {
 
-        ExecutorService l_Ejecutor2 = (ExecutorService) Executors.newFixedThreadPool(NUM_HILOS2);
+        ExecutorService l_Ejecutor2 = Executors.newFixedThreadPool(NUM_HILOS2);
 
         Buzon l_Buzon = new Buzon();
 
@@ -29,7 +31,6 @@ public class EjLectorEscritorNumsV2 {
         l_Ejecutor2.shutdown();
 
     }
-
 }
 
 class Escritor2 implements Runnable {
@@ -43,38 +44,43 @@ class Escritor2 implements Runnable {
     @Override
     public void run() {
 
-        int l_ContadorFinal = 0;
+
         int l_ContadorNums = 1;
         int l_CantidadNums = l_ContadorNums + MAX_NUMS2;
+        FileWriter l_Writer = null;
 
-        while (l_ContadorFinal <= 20) {
+        try {
+            l_Writer = new FileWriter(RUTA_FICHERO);
+        } catch (IOException e) {
+            System.out.println("ERROR: no se ha podido abrir el fichero para escrtitura.");
+        }
+
+        while (true) {
 
             try {
-                BufferedWriter l_Writer = new BufferedWriter(new FileWriter(RUTA2));
+                a_Buzon.adquirirEscritor(1);
 
                 StringBuilder l_StrBuilder = new StringBuilder();
 
                 for (l_ContadorNums = l_CantidadNums - MAX_NUMS2; l_ContadorNums < l_CantidadNums; l_ContadorNums++) {
-                    l_StrBuilder.append(l_ContadorNums + ",");
+                    l_StrBuilder.append(l_ContadorNums).append(",");
                 }
 
                 System.out.println("\nESCRITOR: " + l_StrBuilder);
 
+                //    Thread.sleep(1000);
+
                 l_CantidadNums += MAX_NUMS2;
 
-                l_Writer.write(l_StrBuilder.toString());
+                l_Writer.write(String.valueOf(l_StrBuilder));
                 l_Writer.flush();
-                l_Writer.close();
 
-                a_Buzon.l_Semaforo.acquire(1);
+                a_Buzon.liberarLector(6);
 
             } catch (IOException e) {
                 throw new RuntimeException(e);
-            } catch (InterruptedException e) {
-                throw new RuntimeException(e);
             }
 
-            l_ContadorFinal++;
         }
     }
 }
@@ -92,41 +98,77 @@ class Lector2 implements Runnable {
     public void run() {
 
         int l_ContadorFinal2 = 0;
+        FileReader l_Reader = null;
+        String l_Linea = "";
+        int l_CaracterLeido = 0;
 
-        while (l_ContadorFinal2 <= 20) {
+        try {
+            l_Reader = new FileReader(RUTA_FICHERO);
+        } catch (IOException e) {
+            System.out.println("ERROR: no se ha podido abrir el fichero para escrtitura.");
+        }
 
-            String[] a_Numeros = new String[0];
+        while (true) {
 
-            System.out.print("\nLECTOR: ");
-            try (BufferedReader l_Reader = new BufferedReader(new FileReader(RUTA2))) {
+            l_Linea = "";
 
-                String l_Linea;
+            a_Buzon.adquirirLector(1);
 
-                while ((l_Linea = l_Reader.readLine()) != null) {
-
-                    // Usar split para eliminar las comas y obtener los números
-                    a_Numeros = l_Linea.split(",");
-
+            l_CaracterLeido = 0;
+            while ((l_CaracterLeido != CARACTER_SEPARADOR) && (l_CaracterLeido != EOF)) {
+                if (l_CaracterLeido > 0) l_Linea += (char) l_CaracterLeido;
+                try {
+                    l_CaracterLeido = l_Reader.read();
+                } catch (IOException e) {
+                    System.out.println("ERROR: No se ha podido leer del fichero.");
                 }
 
-                for (String l_Numero : a_Numeros) {
-                    System.out.print("[" + l_Numero + "]"); // Imprimir cada número
-                }
-
-                a_Buzon.l_Semaforo.release(1);
-
-            } catch (FileNotFoundException e) {
-                throw new RuntimeException(e);
-            } catch (IOException e) {
-                throw new RuntimeException(e);
             }
-            l_ContadorFinal2++;
+
+            if (l_CaracterLeido != EOF) {
+                System.out.println("[" + l_Linea + "]");
+                l_Linea = "";
+                try {
+                    Thread.sleep(PAUSA_LECTOR);
+                } catch (InterruptedException e) {
+                    System.out.println("ERROR: Ha fallado el sleep() del lector.");
+                }
+            } else a_Buzon.liberarEscritor(1);
+
         }
     }
 }
 
 class Buzon {
 
-    public Semaphore l_Semaforo = new Semaphore(1);
+    public Semaphore l_SemEscritor = new Semaphore(1);
+    public Semaphore l_SemLector = new Semaphore(0);
+
+    public void adquirirEscritor(int p_Numero) {
+
+        try {
+            this.l_SemEscritor.acquire(p_Numero);
+        } catch (InterruptedException e) {
+            System.err.println("\n>>>> ERROR al adquirir el semáforo del escritor");
+        }
+
+    }
+
+    public void liberarEscritor(int p_Numero) {
+        this.l_SemEscritor.release(p_Numero);
+    }
+
+    public void adquirirLector(int p_Numero) {
+
+        try {
+            this.l_SemLector.acquire(p_Numero);
+        } catch (InterruptedException e) {
+            System.err.println("\n>>>> ERROR al adquirir el semáforo del lector");
+        }
+    }
+
+    public void liberarLector(int p_Numero) {
+        this.l_SemLector.release(p_Numero);
+    }
 
 }
