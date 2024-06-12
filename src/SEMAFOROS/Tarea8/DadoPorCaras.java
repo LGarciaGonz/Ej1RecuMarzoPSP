@@ -1,7 +1,6 @@
 package SEMAFOROS.Tarea8;
 
 
-import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.time.format.DateTimeFormatter;
 import java.util.concurrent.ExecutorService;
@@ -38,7 +37,7 @@ public class DadoPorCaras {
         l_Ejecutor.submit(l_Dado5);
         l_Ejecutor.submit(l_Dado6);
 
-//        l_Ejecutor.shutdown();
+        l_Ejecutor.shutdown();
 
     }
 }
@@ -61,12 +60,15 @@ class Dado implements Runnable {
         int l_ContCara1 = 0, l_ContCara2 = 0, l_ContCara3 = 0, l_ContCara4 = 0, l_ContCara5 = 0, l_ContCara6 = 0;
         int l_Incremento = 0;
         int l_Random = 0;
+        int l_Acabar = 0;
 
 
         while (a_Buzon.a_ContadorTiradas < ORDEN_PARADA) {
 
+//            a_Buzon.a_Turno++;
+
             try {
-                a_Buzon.a_Semaforo2.acquire();
+                a_Buzon.a_SemaforoCaras.acquire();
             } catch (InterruptedException e) {
                 System.err.println("\n>>> ERROR: Se ha producido un error.");
             }
@@ -83,27 +85,27 @@ class Dado implements Runnable {
                 switch (l_Random) {
                     case 1 -> {
                         a_Buzon.a_D1 += l_Incremento;
-                        l_ContCara1+= l_Incremento;
+                        l_ContCara1 += l_Incremento;
                     }
                     case 2 -> {
                         a_Buzon.a_D2 += l_Incremento;
-                        l_ContCara2+= l_Incremento;
+                        l_ContCara2 += l_Incremento;
                     }
                     case 3 -> {
                         a_Buzon.a_D3 += l_Incremento;
-                        l_ContCara3+= l_Incremento;
+                        l_ContCara3 += l_Incremento;
                     }
                     case 4 -> {
                         a_Buzon.a_D4 += l_Incremento;
-                        l_ContCara4+= l_Incremento;
+                        l_ContCara4 += l_Incremento;
                     }
                     case 5 -> {
                         a_Buzon.a_D5 += l_Incremento;
-                        l_ContCara5+= l_Incremento;
+                        l_ContCara5 += l_Incremento;
                     }
                     case 6 -> {
                         a_Buzon.a_D6 += l_Incremento;
-                        l_ContCara6+= l_Incremento;
+                        l_ContCara6 += l_Incremento;
                     }
 
                 }
@@ -143,16 +145,32 @@ class Dado implements Runnable {
             }
 
             a_Buzon.a_ContadorTiradas++;
-            a_Buzon.a_Semaforo2.release();
+            a_Buzon.a_SemaforoCaras.release();
 
         }
 
-
-        // Declaración de variables.
-        LocalDateTime l_Hora = LocalDateTime.now();
-        String l_HoraFormatted = l_Hora.format(DateTimeFormatter.ofPattern("HH:mm:ss"));
-
-        System.out.println(l_HoraFormatted + " - CARA" + a_NumDado + " - " + l_ContCara1 + ", " + l_ContCara2 + ", " + l_ContCara3 + ", " + l_ContCara4 + ", " + l_ContCara5 + ", " + l_ContCara6);
+//        while (a_Buzon.a_Turno != a_NumDado) {
+//            try {
+//                a_Buzon.a_SemaforoCaras.acquire();
+//            } catch (InterruptedException e) {
+//                System.err.println("\n>>> ERROR: Se ha producido un error.");
+//            }
+//
+//            l_Acabar = a_Buzon.a_Turno;
+//
+//            if (l_Acabar != a_NumDado) a_Buzon.a_SemaforoCaras.release();
+//            else {
+//
+//                // Declaración de variables.
+//                LocalDateTime l_Hora = LocalDateTime.now();
+//                String l_HoraFormatted = l_Hora.format(DateTimeFormatter.ofPattern("HH:mm:ss"));
+//
+//                System.out.println(l_HoraFormatted + " - CARA" + a_NumDado + " - " + l_ContCara1 + ", " + l_ContCara2 + ", " + l_ContCara3 + ", " + l_ContCara4 + ", " + l_ContCara5 + ", " + l_ContCara6);
+//
+//                a_Buzon.a_Turno++;
+//
+//            }
+//        }
     }
 }
 
@@ -169,7 +187,8 @@ class Banca implements Runnable {
 
         // Adquirir el token del semáforo.
         try {
-            a_Buzon.a_Semaforo1.acquire();
+
+            a_Buzon.a_SemaforoBanca.acquire();
 
             while (a_Buzon.a_ContadorTiradas < ORDEN_PARADA) {
 
@@ -193,11 +212,13 @@ class Banca implements Runnable {
                 }
             }
             // Liberar y adquirir el token del semáforo.
-            a_Buzon.a_Semaforo1.release();
-            a_Buzon.a_Semaforo1.acquire();
+            a_Buzon.a_SemaforoBanca.release();
+            a_Buzon.a_SemaforoBanca.acquire();
 
             // Imprimir los totales de cada contador.
             System.out.println("\t\tTOTALES: " + a_Buzon.a_D1 + ", " + a_Buzon.a_D2 + ", " + a_Buzon.a_D3 + ", " + a_Buzon.a_D4 + ", " + a_Buzon.a_D5 + ", " + a_Buzon.a_D6);
+
+//            a_Buzon.a_SemaforoBanca.release();
 
         } catch (InterruptedException e) {
             System.err.println("\n>>> ERROR: Se ha producido un error");
@@ -216,7 +237,9 @@ class Buzon {
 
     public int a_ContadorTiradas;
 
-    public Semaphore a_Semaforo1 = new Semaphore(1, true);
-    public Semaphore a_Semaforo2 = new Semaphore(1, true);
+    public int a_Turno = 1;
+
+    public Semaphore a_SemaforoBanca = new Semaphore(1, true);
+    public Semaphore a_SemaforoCaras = new Semaphore(1, true);
 
 }
